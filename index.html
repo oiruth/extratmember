@@ -106,7 +106,7 @@
 
     // Função para enviar o código via servidor (backend)
     function sendCodeToServer() {
-        fetch('http://localhost:5000/send_code', {
+        fetch('https://extratmember.vercel.app/send_code', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' }
         })
@@ -152,7 +152,7 @@
     function generateKey() {
         const validityDays = document.getElementById('validity-days').value;
         
-        fetch('http://localhost:5000/generate_key', {
+        fetch('https://extratmember.vercel.app/generate_key', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ validity_days: validityDays })
@@ -185,7 +185,7 @@
 
     // Função para carregar as chaves
     function loadKeys() {
-        fetch('http://localhost:5000/get_keys')
+        fetch('https://extratmember.vercel.app/get_keys')
         .then(response => response.json())
         .then(keys => {
             const keyList = document.getElementById('key-list');
