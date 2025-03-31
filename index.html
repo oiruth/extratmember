@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Admin - Futurista</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #111;
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            width: 60%;
+            background-color: #222;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+        }
+        h1 {
+            text-align: center;
+        }
+        .input-field {
+            margin-bottom: 15px;
+            width: 100%;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #333;
+            background-color: #333;
+            color: #fff;
+        }
+        .button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+        }
+        .button:hover {
+            background-color: #45a049;
+        }
+        .key-list {
+            margin-top: 20px;
+            list-style: none;
+            padding: 0;
+        }
+        .key-item {
+            background-color: #333;
+            margin: 10px 0;
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .key-item button {
+            background-color: #f44336;
+            color: white;
+            border: none;
+            padding: 10px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        .key-item button:hover {
+            background-color: #d32f2f;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Painel Admin</h1>
+    
+    <!-- Login -->
+    <div id="login">
+        <label for="username">Usuário:</label>
+        <input type="text" id="username" class="input-field" placeholder="Digite o usuário">
+        <button class="button" onclick="login()">Entrar</button>
+    </div>
+
+    <!-- Código de 6 dígitos -->
+    <div id="code-entry" style="display: none;">
+        <label for="code">Código de 6 dígitos:</label>
+        <input type="text" id="code" class="input-field" placeholder="Digite o código">
+        <button class="button" onclick="verifyCode()">Verificar Código</button>
+    </div>
+
+    <!-- Painel de Geração de Chaves -->
+    <div id="key-panel" style="display: none;">
+        <label for="validity-days">Prazo da Key (em dias):</label>
+        <input type="number" id="validity-days" class="input-field" placeholder="Digite o prazo">
+        <button class="button" onclick="generateKey()">Gerar Chave</button>
+        
+        <ul id="key-list" class="key-list"></ul>
+    </div>
+</div>
+
+<script>
+    const USERNAME = 'admin-martins-196121';
+
+    // Função para enviar o código via servidor (backend)
+    function sendCodeToServer() {
+        fetch('http://localhost:5000/send_code', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.message === 'Código enviado com sucesso') {
+                localStorage.setItem('authCode', data.code);  // Salvar o código no localStorage para verificação
+                console.log('Código enviado com sucesso!');
+            }
+        })
+        .catch(error => console.error('Erro ao enviar código para o servidor:', error));
+    }
+
+    // Função de login
+    function login() {
+        const username = document.getElementById('username').value;
+        
+        if (username === USERNAME) {
+            document.getElementById('login').style.display = 'none';
+            document.getElementById('code-entry').style.display = 'block';
+            sendCodeToServer(); // Envia o código assim que o login é realizado
+            localStorage.setItem('username', username); // Salva o login no localStorage
+        } else {
+            alert('Usuário inválido!');
+        }
+    }
+
+    // Função para verificar o código
+    function verifyCode() {
+        const enteredCode = document.getElementById('code').value;
+        const storedCode = localStorage.getItem('authCode');
+        
+        if (enteredCode === storedCode) {
+            document.getElementById('code-entry').style.display = 'none';
+            document.getElementById('key-panel').style.display = 'block';
+            loadKeys(); // Carregar as chaves ao verificar o código
+        } else {
+            alert('Código inválido!');
+        }
+    }
+
+    // Função para gerar chave
+    function generateKey() {
+        const validityDays = document.getElementById('validity-days').value;
+        
+        fetch('http://localhost:5000/generate_key', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ validity_days: validityDays })
+        })
+        .then(response => response.json())
+        .then(data => {
+            const keyList = document.getElementById('key-list');
+            const li = document.createElement('li');
+            li.classList.add('key-item');
+            li.innerHTML = `${data.key} - Expira em: ${data.expires_at} <button onclick="deleteKey('${data.key}')">Excluir</button>`;
+            keyList.appendChild(li);
+        })
+        .catch(error => console.error('Erro ao gerar chave:', error));
+    }
+
+    // Função para excluir chave
+    function deleteKey(key) {
+        fetch('http://localhost:5000/delete_key', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ key: key })
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert(data.message);
+            loadKeys();  // Atualizar a lista de chaves após excluir
+        })
+        .catch(error => console.error('Erro ao excluir chave:', error));
+    }
+
+    // Função para carregar as chaves
+    function loadKeys() {
+        fetch('http://localhost:5000/get_keys')
+        .then(response => response.json())
+        .then(keys => {
+            const keyList = document.getElementById('key-list');
+            keyList.innerHTML = ''; // Limpar a lista antes de adicionar
+            keys.forEach(key => {
+                const li = document.createElement('li');
+                li.classList.add('key-item');
+                li.innerHTML = `${key.key} - Expira em: ${key.expires_at} <button onclick="deleteKey('${key.key}')">Excluir</button>`;
+                keyList.appendChild(li);
+            });
+        })
+        .catch(error => console.error('Erro ao carregar as chaves:', error));
+    }
+
+    // Verificar se o usuário já está logado
+    if (localStorage.getItem('username')) {
+        document.getElementById('login').style.display = 'none';
+        document.getElementById('key-panel').style.display = 'block';
+        loadKeys();  // Carregar as chaves ao carregar a página
+    }
+</script>
+
+</body>
+</html>
